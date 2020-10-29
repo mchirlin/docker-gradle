@@ -60,27 +60,46 @@ RUN set -o errexit -o nounset \
     && gradle --version
     
 
-## FTP Server
+## FTP Server https://hub.docker.com/r/panubo/vsftpd/
+
+ARG USER_ID=14
+ARG GROUP_ID=50
+
+RUN usermod -u ${USER_ID} ftp
+RUN groupmod -g ${GROUP_ID} ftp
 
 ENV FTP_USER ftp
-ENV FTP_PASSWORD password
+ENV FTP_PASS password
+ENV PASV_ADDRESS **IPv4**
+ENV PASV_ADDR_RESOLVE NO
+ENV PASV_ENABLE YES
+ENV PASV_MIN_PORT 21100
+ENV PASV_MAX_PORT 21110
+ENV XFERLOG_STD_FORMAT NO
+ENV LOG_STDOUT **Boolean**
+ENV FILE_OPEN_MODE 0666
+ENV LOCAL_UMASK 077
+ENV REVERSE_LOOKUP_ENABLE YES
+ENV PASV_PROMISCUOUS NO
+ENV PORT_PROMISCUOUS NO
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends vsftpd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /var/run/vsftpd/empty \
- && mkdir -p /etc/vsftpd \
- && mkdir -p /var/ftp \
- && mv /etc/vsftpd.conf /etc/vsftpd.orig \
- && mkdir /etc/service/vsftpd
+COPY vsftpd.conf /etc/vsftpd/
+COPY vsftpd_virtual /etc/pam.d/
+COPY run-vsftpd.sh /usr/sbin/
 
-ADD vsftpd.sh /etc/service/vsftpd/run
+RUN chmod +x /usr/sbin/run-vsftpd.sh
+RUN mkdir -p /home/vsftpd/
+RUN chown -R ftp:ftp /home/vsftpd/
 
-VOLUME ["/var/ftp"]
+VOLUME /home/vsftpd
+VOLUME /var/log/vsftpd
 
-# EXPOSE 20-21
+EXPOSE 20 21
 
 ## SFTP Server
 
