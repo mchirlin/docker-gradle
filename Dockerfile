@@ -68,7 +68,7 @@ ARG GROUP_ID=50
 RUN usermod -u ${USER_ID} ftp
 RUN groupmod -g ${GROUP_ID} ftp
 
-ENV FTP_USER ftp
+ENV FTP_USER username
 ENV FTP_PASS password
 ENV PASV_ADDRESS **IPv4**
 ENV PASV_ADDR_RESOLVE NO
