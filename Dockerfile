@@ -59,64 +59,36 @@ RUN set -o errexit -o nounset \
     && echo "Testing Gradle installation" \
     && gradle --version
     
+## FTP Server https://hub.docker.com/r/panubo/vsftpd/ https://github.com/panubo/docker-vsftpd/blob/master/Dockerfile
 
-## FTP Server https://hub.docker.com/r/panubo/vsftpd/
-
-ARG USER_ID=14
-ARG GROUP_ID=50
-
-RUN usermod -u ${USER_ID} ftp
-RUN groupmod -g ${GROUP_ID} ftp
-
-ENV FTP_USER username
-ENV FTP_PASS password
-ENV PASV_ADDRESS **IPv4**
-ENV PASV_ADDR_RESOLVE NO
-ENV PASV_ENABLE YES
-ENV PASV_MIN_PORT 21100
-ENV PASV_MAX_PORT 21110
-ENV XFERLOG_STD_FORMAT NO
-ENV LOG_STDOUT **Boolean**
-ENV FILE_OPEN_MODE 0666
-ENV LOCAL_UMASK 077
-ENV REVERSE_LOOKUP_ENABLE YES
-ENV PASV_PROMISCUOUS NO
-ENV PORT_PROMISCUOUS NO
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends vsftpd \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY vsftpd.conf /etc/vsftpd/
-COPY vsftpd_virtual /etc/pam.d/
-COPY run-vsftpd.sh /usr/sbin/
-
-RUN chmod +x /usr/sbin/run-vsftpd.sh
-RUN mkdir -p /home/vsftpd/
-RUN chown -R ftp:ftp /home/vsftpd/
-
-VOLUME /home/vsftpd
-VOLUME /var/log/vsftpd
-
-EXPOSE 20 21
-
-## SFTP Server
-
-# RUN apt-get update && apt-get install -y \
-#	openssh-server \
-#	mcrypt \
-#	&& mkdir /var/run/sshd \
-#	&& chmod 0755 /var/run/sshd \
-#	&& mkdir -p /data/incoming \
-#	&& apt-get clean \
-#	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-#	&& mkdir /ssh/
+ARG FTP_UID=48
+ARG FTP_GID=48
+RUN set -x \
+  && groupadd -g ${FTP_GID} ftp \
+  && useradd --no-create-home --home-dir /srv -s /bin/false --uid ${FTP_UID} --gid ${FTP_GID} -c 'ftp daemon' ftp \
+  ;
   
-# ADD start.sh /usr/local/bin/start.sh
-# ADD sshd_config /etc/ssh/sshd_config
+RUN set -x \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends vsftpd db5.3-util whois \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* \
+  ;
 
-# VOLUME ["/data/incoming"]
-# EXPOSE 22
+RUN set -x \
+  && mkdir -p /var/run/vsftpd/empty /etc/vsftpd/user_conf /var/ftp /srv \
+  && touch /var/log/vsftpd.log \
+  && rm -rf /srv/ftp \
+  ;
 
-# CMD ["/bin/bash", "/usr/local/bin/start.sh"]
+COPY vsftpd*.conf /etc/
+COPY vsftpd_virtual /etc/pam.d/
+COPY *.sh /
+
+VOLUME ["/etc/vsftpd", "/srv"]
+
+EXPOSE 21 4559 4560 4561 4562 4563 4564
+
+ENTRYPOINT ["/entry.sh"]
+CMD ["vsftpd"]
+
